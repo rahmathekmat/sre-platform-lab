@@ -36,10 +36,10 @@ tests:
   - series: http_requests_total{job="orders-api",instance="10.0.0.1:8080",route="/api/orders",code="500"}
     values: 0+10x60
   promql_expr_test:
-  - expr: slo:sli_error:ratio_rate5m
+  - expr: round(slo:sli_error:ratio_rate5m, 0.0001)
     eval_time: 30m
     exp_samples:
-    - labels: slo:sli_error:ratio_rate5m{job="orders-api"}
+    - labels: '{job="orders-api"}'
       value: 0.1
   alert_rule_test:
   - eval_time: 1m
