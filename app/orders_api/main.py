@@ -20,6 +20,7 @@ import random
 import signal
 import threading
 import time
+import uuid
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -124,26 +125,42 @@ def make_handler(app: App) -> type[BaseHTTPRequestHandler]:
             self._instrumented("unmatched", lambda: (404, {"error": "not found"}))
 
         def _instrumented(self, route: str, fn) -> None:
+            # Honour an upstream request id (from an ingress or a caller) or mint one,
+            # so a failing request can be traced across logs, and echo it to the client.
+            request_id = self.headers.get("X-Request-ID") or uuid.uuid4().hex[:16]
             app.metrics.in_flight.inc()
             start = time.perf_counter()
             try:
                 code, body = fn()
             except Exception:  # pragma: no cover - defensive
-                log.exception("unhandled error on %s", route)
+                log.exception("unhandled error on %s request_id=%s", route, request_id)
                 code, body = 500, {"error": "internal"}
             finally:
                 app.metrics.in_flight.dec()
-            app.metrics.latency.labels(route=route).observe(time.perf_counter() - start)
+            elapsed = time.perf_counter() - start
+            app.metrics.latency.labels(route=route).observe(elapsed)
             app.metrics.requests.labels(route=route, code=str(code)).inc()
-            self._json(code, body)
+            log.log(
+                logging.WARNING if code >= 500 else logging.INFO,
+                "route=%s code=%d ms=%.1f request_id=%s",
+                route,
+                code,
+                elapsed * 1000,
+                request_id,
+            )
+            self._json(code, body, {"X-Request-ID": request_id})
 
-        def _json(self, code: int, body: dict) -> None:
-            self._send(code, json.dumps(body).encode(), "application/json")
+        def _json(self, code: int, body: dict, headers: dict | None = None) -> None:
+            self._send(code, json.dumps(body).encode(), "application/json", headers)
 
-        def _send(self, code: int, payload: bytes, content_type: str) -> None:
+        def _send(
+            self, code: int, payload: bytes, content_type: str, headers: dict | None = None
+        ) -> None:
             self.send_response(code)
             self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(payload)))
+            for name, value in (headers or {}).items():
+                self.send_header(name, value)
             self.end_headers()
             self.wfile.write(payload)
 
