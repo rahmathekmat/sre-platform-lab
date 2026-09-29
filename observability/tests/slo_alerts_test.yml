@@ -1,0 +1,119 @@
+# promtool unit tests for the orders-api SLO alerts.
+# Run: make test-rules (extracts rules from k8s/base/prometheusrule.yaml first)
+rule_files:
+- generated/orders-api.rules.yml
+evaluation_interval: 1m
+tests:
+- name: healthy traffic fires nothing
+  interval: 1m
+  input_series:
+  - series: up{job="orders-api",instance="10.0.0.1:8080"}
+    values: 1x240
+  - series: http_requests_total{job="orders-api",instance="10.0.0.1:8080",route="/api/orders",code="200"}
+    values: 0+100x240
+  - series: http_requests_total{job="orders-api",instance="10.0.0.1:8080",route="/api/orders",code="500"}
+    values: '0x240'
+  alert_rule_test:
+  - eval_time: 2h
+    alertname: OrdersApiErrorBudgetBurnFast
+    exp_alerts: []
+  - eval_time: 2h
+    alertname: OrdersApiErrorBudgetBurnSlow
+    exp_alerts: []
+  - eval_time: 2h
+    alertname: OrdersApiLatencyBudgetBurnFast
+    exp_alerts: []
+  - eval_time: 2h
+    alertname: OrdersApiTargetsDown
+    exp_alerts: []
+- name: 10% errors page via fast burn
+  interval: 1m
+  input_series:
+  - series: up{job="orders-api",instance="10.0.0.1:8080"}
+    values: 1x240
+  - series: http_requests_total{job="orders-api",instance="10.0.0.1:8080",route="/api/orders",code="200"}
+    values: 0+90x60
+  - series: http_requests_total{job="orders-api",instance="10.0.0.1:8080",route="/api/orders",code="500"}
+    values: 0+10x60
+  promql_expr_test:
+  - expr: slo:sli_error:ratio_rate5m
+    eval_time: 30m
+    exp_samples:
+    - labels: slo:sli_error:ratio_rate5m{job="orders-api"}
+      value: 0.1
+  alert_rule_test:
+  - eval_time: 1m
+    alertname: OrdersApiErrorBudgetBurnFast
+    exp_alerts: []
+  - eval_time: 30m
+    alertname: OrdersApiErrorBudgetBurnFast
+    exp_alerts:
+    - exp_labels:
+        severity: page
+        job: orders-api
+      exp_annotations:
+        summary: orders-api is burning its 99.9% availability error budget fast
+        description: At this burn rate the 30 day error budget for orders-api is gone in under 5 days. Users are seeing 5xx errors now.
+        runbook_url: https://github.com/rahmathekmat/sre-platform-lab/blob/main/docs/runbooks/OrdersApiErrorBudgetBurnFast.md
+- name: 0.5% errors open a ticket but do not page
+  interval: 1m
+  input_series:
+  - series: up{job="orders-api",instance="10.0.0.1:8080"}
+    values: 1x240
+  - series: http_requests_total{job="orders-api",instance="10.0.0.1:8080",route="/api/orders",code="200"}
+    values: 0+199x180
+  - series: http_requests_total{job="orders-api",instance="10.0.0.1:8080",route="/api/orders",code="500"}
+    values: 0+1x180
+  alert_rule_test:
+  - eval_time: 3h
+    alertname: OrdersApiErrorBudgetBurnSlow
+    exp_alerts:
+    - exp_labels:
+        severity: ticket
+        job: orders-api
+      exp_annotations:
+        summary: orders-api is slowly burning its availability error budget
+        description: Error rate for orders-api is above the SLO and will exhaust the 30 day budget if it continues. Investigate during business hours.
+        runbook_url: https://github.com/rahmathekmat/sre-platform-lab/blob/main/docs/runbooks/OrdersApiErrorBudgetBurnSlow.md
+  - eval_time: 3h
+    alertname: OrdersApiErrorBudgetBurnFast
+    exp_alerts: []
+- name: half of requests slower than 300ms pages on latency
+  interval: 1m
+  input_series:
+  - series: up{job="orders-api",instance="10.0.0.1:8080"}
+    values: 1x240
+  - series: http_request_duration_seconds_bucket{job="orders-api",instance="10.0.0.1:8080",route="/api/orders",le="0.3"}
+    values: 0+50x60
+  - series: http_request_duration_seconds_count{job="orders-api",instance="10.0.0.1:8080",route="/api/orders"}
+    values: 0+100x60
+  alert_rule_test:
+  - eval_time: 30m
+    alertname: OrdersApiLatencyBudgetBurnFast
+    exp_alerts:
+    - exp_labels:
+        severity: page
+        job: orders-api
+      exp_annotations:
+        summary: orders-api is burning its latency error budget fast
+        description: More than 14.4% of orders-api requests are slower than 300ms against a 99% under 300ms SLO.
+        runbook_url: https://github.com/rahmathekmat/sre-platform-lab/blob/main/docs/runbooks/OrdersApiLatencyBudgetBurnFast.md
+- name: all targets down pages
+  interval: 1m
+  input_series:
+  - series: up{job="orders-api",instance="10.0.0.1:8080"}
+    values: '0x20'
+  alert_rule_test:
+  - eval_time: 2m
+    alertname: OrdersApiTargetsDown
+    exp_alerts: []
+  - eval_time: 10m
+    alertname: OrdersApiTargetsDown
+    exp_alerts:
+    - exp_labels:
+        severity: page
+        job: orders-api
+      exp_annotations:
+        summary: No healthy scrape targets for orders-api
+        description: Prometheus cannot scrape any orders-api pod. Either every pod is down or service discovery is broken, so the SLO alerts above are blind.
+        runbook_url: https://github.com/rahmathekmat/sre-platform-lab/blob/main/docs/runbooks/OrdersApiTargetsDown.md
