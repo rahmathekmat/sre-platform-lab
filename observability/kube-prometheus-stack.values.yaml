@@ -1,0 +1,52 @@
+# Shared kube-prometheus-stack values: used by Terraform (local and EKS) and by CI.
+
+# Pick up ServiceMonitors and PrometheusRules from every namespace, not only the ones
+# labelled with this Helm release. Teams own their monitoring next to their manifests.
+prometheus:
+  prometheusSpec:
+    scrapeInterval: 15s
+    evaluationInterval: 15s
+    retention: 7d
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    resources:
+      requests:
+        cpu: 100m
+        memory: 400Mi
+
+alertmanager:
+  config:
+    route:
+      receiver: "null"
+      group_by: ["alertname", "job"]
+      routes:
+        # In a real setup `page` goes to PagerDuty/Opsgenie and `ticket` to a queue.
+        - receiver: "null"
+          matchers: ['severity="page"']
+          group_wait: 30s
+          repeat_interval: 1h
+        - receiver: "null"
+          matchers: ['severity="ticket"']
+          repeat_interval: 12h
+    receivers:
+      - name: "null"
+
+grafana:
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"
+      searchNamespace: ALL
+
+# kind and EKS do not expose these control plane components for scraping,
+# so disable them rather than living with permanently firing TargetDown alerts.
+kubeEtcd:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false
