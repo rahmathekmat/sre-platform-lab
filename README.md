@@ -1,55 +1,74 @@
-# sre-platform-lab
+<p align="center">
+  <img src="docs/images/banner.svg" alt="sre-platform-lab: SLOs as code, burn-rate alerting, and a CI pipeline that breaks the service on purpose" width="100%">
+</p>
 
-[![ci](https://github.com/rahmathekmat/sre-platform-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/rahmathekmat/sre-platform-lab/actions/workflows/ci.yml)
+<p align="center">
+  <a href="https://github.com/rahmathekmat/sre-platform-lab/actions/workflows/ci.yml"><img src="https://github.com/rahmathekmat/sre-platform-lab/actions/workflows/ci.yml/badge.svg" alt="ci"></a>
+  <img src="https://img.shields.io/badge/Terraform-kind%20%2B%20EKS-7B42BC?logo=terraform&logoColor=white" alt="Terraform">
+  <img src="https://img.shields.io/badge/Kubernetes-1.31-326CE5?logo=kubernetes&logoColor=white" alt="Kubernetes">
+  <img src="https://img.shields.io/badge/Prometheus-SLO%20alerts-E6522C?logo=prometheus&logoColor=white" alt="Prometheus">
+  <img src="https://img.shields.io/badge/Grafana-dashboard-F46800?logo=grafana&logoColor=white" alt="Grafana">
+  <img src="https://img.shields.io/badge/license-MIT-2dd4bf" alt="MIT license">
+</p>
 
-A small service run the way I think production services should be run: infrastructure as code, Kubernetes manifests hardened by default, SLOs defined up front, alerts that page on error budget burn instead of raw thresholds, runbooks for every page, and a CI pipeline that proves the alerting works by breaking the service on purpose.
+<p align="center">
+  <a href="#what-it-does">What it does</a> ·
+  <a href="#architecture">Architecture</a> ·
+  <a href="#slos-and-alerting">SLOs</a> ·
+  <a href="#run-it-locally">Run it</a> ·
+  <a href="#game-day">Game day</a> ·
+  <a href="#design-decisions">Design decisions</a>
+</p>
 
-The app is deliberately boring (`orders-api`, a few endpoints). Everything interesting is around it.
+## What it does
 
-## What's in here
+A small web service (`orders-api`) run the way production services should be run. The app is deliberately boring. Everything interesting is the platform around it:
 
-| Area | What it shows |
+> **Define what "reliable" means, alert only when that promise is actually at risk, and prove the alerting works by breaking things on purpose.**
+
+| | |
 |---|---|
-| `terraform/` | kind cluster for local work and a production-shaped AWS reference (VPC over 3 AZs, EKS managed node group), both sharing one `observability` module that installs kube-prometheus-stack |
-| `k8s/` | Kustomize base with probes (startup, liveness, readiness), graceful drain, PodDisruptionBudget, HPA, topology spread, default-deny NetworkPolicy, restricted Pod Security, read-only root filesystem, non-root user |
-| `k8s/base/prometheusrule.yaml` | SLOs as code: 99.9% availability and 99% under 300ms, with multiwindow, multi-burn-rate alerts from the Google SRE Workbook |
-| `observability/tests/` | `promtool` unit tests for every alert: healthy traffic stays quiet, 10% errors page, 0.5% errors open a ticket without paging, slow requests page, dead targets page |
-| `k8s/base/dashboards/` | Grafana SLO dashboard loaded automatically by the Grafana sidecar: availability, budget remaining, burn rate, latency percentiles |
-| `docs/runbooks/` | A runbook for every alert, linked from the alert's `runbook_url` |
-| `scripts/gameday.sh` | Fault injection: error rate, latency, pod kill, node drain |
-| `.github/workflows/ci.yml` | Lint and tests, promtool, kubeconform against Kubernetes and CRD schemas, terraform validate, then a full deploy to kind that injects 50% errors and fails the build unless the fast burn alert fires |
+| **Builds the platform** | Terraform creates a Kubernetes cluster (kind locally, or a production-shaped VPC + EKS on AWS) and installs Prometheus, Alertmanager and Grafana. |
+| **Runs the service safely** | Three replicas spread across nodes, health probes, graceful shutdown, a disruption budget, autoscaling, default-deny networking and restricted pod security. |
+| **Defines SLOs as code** | 99.9% of requests succeed and 99% finish in under 300ms, measured over 30 days. |
+| **Alerts on error budget burn** | Multiwindow, multi-burn-rate alerts from the Google SRE Workbook: page for real outages, ticket for slow leaks, silence for blips. |
+| **Tests the alerts** | Every alert has `promtool` unit tests and a runbook. |
+| **Breaks itself in CI** | Every push deploys to a real cluster, injects 50% errors and fails the build unless the page fires, then checks the service recovers after rollback. |
 
 ## Architecture
 
-```
-                 ┌──────────────────────── kind (local/CI) or EKS ────────────────────────┐
-                 │                                                                         │
-  loadgen Job ──►│  Service orders-api ──► orders-api pods x3 (spread across nodes, PDB 2) │
-                 │                               │ /metrics                                │
-                 │                               ▼                                         │
-                 │  ServiceMonitor ──► Prometheus ──► SLO recording rules ──► burn alerts  │
-                 │                         │                                    │          │
-                 │                         ▼                                    ▼          │
-                 │                      Grafana (SLO dashboard)          Alertmanager      │
-                 │                                                   page / ticket routes  │
-                 └─────────────────────────────────────────────────────────────────────────┘
-```
+<p align="center">
+  <img src="docs/images/architecture.svg" alt="Architecture: Terraform provisions a Kubernetes cluster; orders-api pods are scraped by Prometheus, which evaluates SLO rules and routes alerts through Alertmanager to page or ticket, each linked to a runbook" width="100%">
+</p>
 
-## SLOs
+| Path | What's there |
+|---|---|
+| [`app/`](app) | `orders-api` in Python: Prometheus metrics, fault injection, graceful drain, 11 tests |
+| [`terraform/`](terraform) | `envs/local` (kind), `envs/aws` (VPC over 3 AZs + EKS), shared `modules/observability` |
+| [`k8s/base/`](k8s/base) | Deployment, Service, PDB, HPA, NetworkPolicy, ServiceMonitor, PrometheusRule, Grafana dashboard |
+| [`observability/`](observability) | kube-prometheus-stack values, `promtool` alert tests |
+| [`docs/`](docs) | [SLOs](docs/slo.md), [game day](docs/gameday.md), [runbooks](docs/runbooks), [AWS guide](docs/aws.md) |
+| [`.github/workflows/`](.github/workflows/ci.yml) | Lint, unit tests, alert tests, schema validation, Terraform validate, end to end on kind |
 
-| SLI | Target | Window | Page when | Ticket when |
-|---|---|---|---|---|
-| Availability: share of `/api/orders` requests that are not 5xx | 99.9% | 30 days | burn rate over 14.4x (1h and 5m) or over 6x (6h and 30m) | burn rate over 3x (1d and 2h) or over 1x (3d and 6h) |
-| Latency: share of `/api/orders` requests under 300ms | 99% | 30 days | burn rate over 14.4x (1h and 5m) | |
+## SLOs and alerting
 
-Why burn rates instead of "error rate > 1% for 5 minutes": a threshold either pages on every short blip or misses a slow leak that quietly spends the month's budget. The two-window pairs page quickly on a real outage, reset quickly after recovery, and send slow burns to a ticket queue instead of waking someone up. The reasoning and the numbers are in [docs/slo.md](docs/slo.md).
+| SLI | Target | Page when | Ticket when |
+|---|---|---|---|
+| **Availability:** `/api/orders` requests that aren't 5xx | 99.9% / 30d | burn over 14.4x (1h and 5m) or 6x (6h and 30m) | burn over 3x (1d and 2h) or 1x (3d and 6h) |
+| **Latency:** `/api/orders` requests under 300ms | 99% / 30d | burn over 14.4x (1h and 5m) | |
+
+<p align="center">
+  <img src="docs/images/burn-rate.svg" alt="Chart: a 20 minute incident at 10% errors. The 5m ratio jumps immediately, the 1h ratio climbs slowly, and the page fires only while both are over the threshold" width="100%">
+</p>
+
+A plain "error rate above 1% for 5 minutes" alert either pages on every short spike or misses a slow leak that quietly spends the month's budget. Pairing a long window with a short one pages quickly on a real outage and clears quickly after recovery. Full reasoning in [docs/slo.md](docs/slo.md).
 
 ## Run it locally
 
 Needs Docker, kind, kubectl, Terraform and Python 3.11+.
 
 ```bash
-make up        # kind cluster (1 control plane, 2 workers) + kube-prometheus-stack via Terraform
+make up        # kind cluster (1 control plane, 2 workers) + monitoring stack via Terraform
 make build     # build the image and load it into kind
 make deploy    # orders-api, SLO rules, dashboard
 make load      # start synthetic traffic
@@ -61,7 +80,7 @@ kubectl -n monitoring port-forward svc/kube-prometheus-stack-grafana 3000:80
 make down
 ```
 
-Checks that don't need a cluster:
+No cluster needed for these:
 
 ```bash
 make test        # ruff + pytest
@@ -72,30 +91,32 @@ make tf-check    # terraform fmt + validate
 
 ## Game day
 
-[docs/gameday.md](docs/gameday.md) walks through four experiments with a hypothesis, the command, what to watch and what "pass" looks like:
+[docs/gameday.md](docs/gameday.md) has four experiments, each with a hypothesis, the command, what to watch and what "pass" looks like:
 
-1. Inject 10% errors: the fast burn page fires within minutes, then resolves after recovery
-2. Add 400ms latency: the latency page fires, the availability alerts stay quiet
-3. Kill a pod: no failed requests, because readiness and the Service route around it
-4. Drain a node: the PodDisruptionBudget keeps at least 2 pods serving throughout
+| Experiment | Command | Expected |
+|---|---|---|
+| Error spike | `bash scripts/gameday.sh errors 0.1` | Fast burn page fires within minutes and clears after recovery |
+| Latency regression | `bash scripts/gameday.sh latency 400` | Latency page fires, availability alerts stay quiet |
+| Pod failure | `bash scripts/gameday.sh kill-pod` | Zero failed requests while the pod is replaced |
+| Node drain | `bash scripts/gameday.sh drain-node` | PDB keeps at least 2 pods serving throughout |
 
-CI runs a version of experiment 1 on every push.
+CI runs a version of the first experiment on every push.
 
-## Design notes
+## Design decisions
 
-- **One source of truth for alert rules.** The `PrometheusRule` in `k8s/base` is what gets deployed. CI extracts its `.spec` and runs the promtool tests against it, so the tested rules and the deployed rules cannot drift.
-- **One values file for the monitoring stack.** Terraform (local and EKS) and CI install kube-prometheus-stack from `observability/kube-prometheus-stack.values.yaml`. EKS layers persistent storage and longer retention on top.
-- **Graceful shutdown.** On SIGTERM the app fails readiness first, waits for endpoints to update, then stops accepting connections, so rolling deploys don't drop requests. Liveness stays green while draining so the kubelet doesn't kill a pod that is shutting down cleanly.
-- **Bounded metric cardinality.** Unknown paths are recorded as `route="unmatched"` rather than the raw path, so a scanner can't create unlimited time series.
-- **Rollouts never reduce capacity.** `maxUnavailable: 0`, `maxSurge: 1`, and a PDB of 2 out of 3.
+- **One source of truth for alert rules.** The `PrometheusRule` in `k8s/base` is what gets deployed. CI extracts its `.spec` and runs the `promtool` tests against it, so tested and deployed rules can't drift.
+- **One values file for the monitoring stack**, shared by Terraform (local and EKS) and CI. EKS adds persistent storage and longer retention on top.
+- **Graceful shutdown.** On SIGTERM the app fails readiness first, waits for endpoints to update, then stops, so rolling deploys don't drop requests. Liveness stays green while draining so the kubelet doesn't kill a pod that is shutting down cleanly.
+- **Bounded metric cardinality.** Unknown paths are recorded as `route="unmatched"`, so a scanner can't create unlimited time series.
+- **Rollouts never reduce capacity:** `maxUnavailable: 0`, `maxSurge: 1`, PDB of 2 out of 3.
 
-## Not done yet
+## Roadmap
 
-- Canary or progressive delivery (Argo Rollouts gated on the burn rate)
-- Tracing with OpenTelemetry
-- Real Alertmanager receivers (routes are defined, receivers point at `null`)
-- Applying the AWS environment from CI with OIDC and a plan/apply approval step
+- [ ] Canary releases with Argo Rollouts, gated on burn rate
+- [ ] Tracing with OpenTelemetry
+- [ ] Real Alertmanager receivers (routes exist, receivers point at `null`)
+- [ ] Apply the AWS environment from CI with OIDC and an approval step
 
 ## License
 
-MIT
+[MIT](LICENSE) © Rahmat Hekmat
