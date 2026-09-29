@@ -1,0 +1,129 @@
+# SLOs for orders-api (source of truth; CI extracts .spec to unit test it with promtool)
+#   Availability: 99.9% of /api/orders requests succeed (non 5xx) over 30 days
+#   Latency:      99% of /api/orders requests complete in under 300ms
+# Alerting uses multiwindow, multi-burn-rate alerts from the Google SRE Workbook, ch. 5.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: orders-api-slo
+  labels:
+    app.kubernetes.io/name: orders-api
+spec:
+  groups:
+  - name: orders-api-slo.recording
+    rules:
+    - record: slo:sli_error:ratio_rate5m
+      expr: |
+        sum by (job) (rate(http_requests_total{job="orders-api",route="/api/orders",code=~"5.."}[5m]))
+        /
+        sum by (job) (rate(http_requests_total{job="orders-api",route="/api/orders"}[5m]))
+    - record: slo:sli_error:ratio_rate30m
+      expr: |
+        sum by (job) (rate(http_requests_total{job="orders-api",route="/api/orders",code=~"5.."}[30m]))
+        /
+        sum by (job) (rate(http_requests_total{job="orders-api",route="/api/orders"}[30m]))
+    - record: slo:sli_error:ratio_rate1h
+      expr: |
+        sum by (job) (rate(http_requests_total{job="orders-api",route="/api/orders",code=~"5.."}[1h]))
+        /
+        sum by (job) (rate(http_requests_total{job="orders-api",route="/api/orders"}[1h]))
+    - record: slo:sli_error:ratio_rate2h
+      expr: |
+        sum by (job) (rate(http_requests_total{job="orders-api",route="/api/orders",code=~"5.."}[2h]))
+        /
+        sum by (job) (rate(http_requests_total{job="orders-api",route="/api/orders"}[2h]))
+    - record: slo:sli_error:ratio_rate6h
+      expr: |
+        sum by (job) (rate(http_requests_total{job="orders-api",route="/api/orders",code=~"5.."}[6h]))
+        /
+        sum by (job) (rate(http_requests_total{job="orders-api",route="/api/orders"}[6h]))
+    - record: slo:sli_error:ratio_rate1d
+      expr: |
+        sum by (job) (rate(http_requests_total{job="orders-api",route="/api/orders",code=~"5.."}[1d]))
+        /
+        sum by (job) (rate(http_requests_total{job="orders-api",route="/api/orders"}[1d]))
+    - record: slo:sli_error:ratio_rate3d
+      expr: |
+        sum by (job) (rate(http_requests_total{job="orders-api",route="/api/orders",code=~"5.."}[3d]))
+        /
+        sum by (job) (rate(http_requests_total{job="orders-api",route="/api/orders"}[3d]))
+    - record: slo:sli_latency_error:ratio_rate5m
+      expr: |
+        1 - (
+          sum by (job) (rate(http_request_duration_seconds_bucket{job="orders-api",route="/api/orders",le="0.3"}[5m]))
+          /
+          sum by (job) (rate(http_request_duration_seconds_count{job="orders-api",route="/api/orders"}[5m]))
+        )
+    - record: slo:sli_latency_error:ratio_rate1h
+      expr: |
+        1 - (
+          sum by (job) (rate(http_request_duration_seconds_bucket{job="orders-api",route="/api/orders",le="0.3"}[1h]))
+          /
+          sum by (job) (rate(http_request_duration_seconds_count{job="orders-api",route="/api/orders"}[1h]))
+        )
+  - name: orders-api-slo.alerts
+    rules:
+    - alert: OrdersApiErrorBudgetBurnFast
+      expr: |
+        (
+          slo:sli_error:ratio_rate1h > (14.4 * 0.001)
+          and
+          slo:sli_error:ratio_rate5m > (14.4 * 0.001)
+        )
+        or
+        (
+          slo:sli_error:ratio_rate6h > (6 * 0.001)
+          and
+          slo:sli_error:ratio_rate30m > (6 * 0.001)
+        )
+      for: 2m
+      labels:
+        severity: page
+      annotations:
+        summary: '{{ $labels.job }} is burning its 99.9% availability error budget fast'
+        description: At this burn rate the 30 day error budget for {{ $labels.job }} is gone in under 5 days. Users are seeing 5xx errors now.
+        runbook_url: https://github.com/rahmathekmat/sre-platform-lab/blob/main/docs/runbooks/OrdersApiErrorBudgetBurnFast.md
+    - alert: OrdersApiErrorBudgetBurnSlow
+      expr: |
+        (
+          slo:sli_error:ratio_rate1d > (3 * 0.001)
+          and
+          slo:sli_error:ratio_rate2h > (3 * 0.001)
+        )
+        or
+        (
+          slo:sli_error:ratio_rate3d > 0.001
+          and
+          slo:sli_error:ratio_rate6h > 0.001
+        )
+      for: 15m
+      labels:
+        severity: ticket
+      annotations:
+        summary: '{{ $labels.job }} is slowly burning its availability error budget'
+        description: Error rate for {{ $labels.job }} is above the SLO and will exhaust the 30 day budget if it continues. Investigate during business hours.
+        runbook_url: https://github.com/rahmathekmat/sre-platform-lab/blob/main/docs/runbooks/OrdersApiErrorBudgetBurnSlow.md
+    - alert: OrdersApiLatencyBudgetBurnFast
+      expr: |
+        slo:sli_latency_error:ratio_rate1h > (14.4 * 0.01)
+        and
+        slo:sli_latency_error:ratio_rate5m > (14.4 * 0.01)
+      for: 2m
+      labels:
+        severity: page
+      annotations:
+        summary: '{{ $labels.job }} is burning its latency error budget fast'
+        description: More than 14.4% of {{ $labels.job }} requests are slower than 300ms against a 99% under 300ms SLO.
+        runbook_url: https://github.com/rahmathekmat/sre-platform-lab/blob/main/docs/runbooks/OrdersApiLatencyBudgetBurnFast.md
+    - alert: OrdersApiTargetsDown
+      expr: |
+        max by (job) (up{job="orders-api"}) == 0
+        or
+        absent(up{job="orders-api"})
+      for: 3m
+      labels:
+        severity: page
+      annotations:
+        summary: No healthy scrape targets for {{ $labels.job }}
+        description: Prometheus cannot scrape any {{ $labels.job }} pod. Either every pod is down or service discovery is broken, so the SLO alerts above are blind.
+        runbook_url: https://github.com/rahmathekmat/sre-platform-lab/blob/main/docs/runbooks/OrdersApiTargetsDown.md

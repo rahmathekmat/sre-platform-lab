@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: orders
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: sre-platform-lab
+resources:
+  - namespace.yaml
+  - deployment.yaml
+  - service.yaml
+  - pdb.yaml
+  - hpa.yaml
+  - networkpolicy.yaml
+  - servicemonitor.yaml
+  - prometheusrule.yaml
+# The Grafana sidecar in kube-prometheus-stack loads any ConfigMap labelled grafana_dashboard=1
+configMapGenerator:
+  - name: orders-api-dashboard
+    files:
+      - dashboards/orders-api-slo.json
+    options:
+      disableNameSuffixHash: true
+      labels:
+        grafana_dashboard: "1"
