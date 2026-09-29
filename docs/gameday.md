@@ -33,4 +33,6 @@ Write down the hypothesis before each experiment, and record what actually happe
 
 ## Automated version
 
-CI runs experiment 1 at 50% errors on every push (`scripts/e2e_check.py`). The build fails if the page does not fire, which means a change that silently breaks metrics, scraping, recording rules or the alert expression cannot merge.
+CI runs experiment 1 at 50% errors on every push (`scripts/e2e_check.py`). The build fails if the page does not fire, or if Alertmanager does not deliver it to the webhook receiver (`alert-sink`). A change that silently breaks metrics, scraping, recording rules, the alert expression, routing or the receiver cannot merge.
+
+To see deliveries locally: `kubectl -n monitoring port-forward svc/alert-sink 8081:8080` then open http://localhost:8081/alerts.
