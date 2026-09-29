@@ -17,19 +17,44 @@ prometheus:
 
 alertmanager:
   config:
+    global:
+      resolve_timeout: 5m
     route:
-      receiver: "null"
+      receiver: page
       group_by: ["alertname", "job"]
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 4h
       routes:
-        # In a real setup `page` goes to PagerDuty/Opsgenie and `ticket` to a queue.
-        - receiver: "null"
+        - receiver: page
           matchers: ['severity="page"']
-          group_wait: 30s
           repeat_interval: 1h
-        - receiver: "null"
+        - receiver: ticket
           matchers: ['severity="ticket"']
           repeat_interval: 12h
+        # Everything else (kube-prometheus-stack's own alerts, Watchdog) is dropped here.
+        - receiver: "null"
+          matchers: ['alertname=~".+"']
     receivers:
+      # Locally and in CI both receivers deliver to alert-sink (k8s/alert-sink), which
+      # records every notification so the e2e test can prove delivery.
+      # For production swap in the real thing, for example:
+      #   - name: page
+      #     pagerduty_configs:
+      #       - routing_key_file: /etc/alertmanager/secrets/pagerduty/routing-key
+      #         severity: critical
+      #   - name: ticket
+      #     slack_configs:
+      #       - api_url_file: /etc/alertmanager/secrets/slack/webhook
+      #         channel: "#orders-reliability"
+      - name: page
+        webhook_configs:
+          - url: http://alert-sink.monitoring.svc:8080/alerts?severity=page
+            send_resolved: true
+      - name: ticket
+        webhook_configs:
+          - url: http://alert-sink.monitoring.svc:8080/alerts?severity=ticket
+            send_resolved: true
       - name: "null"
 
 grafana:
