@@ -1,0 +1,14 @@
+# Deployed into the monitoring namespace so Alertmanager can reach it by DNS:
+# http://alert-sink.monitoring.svc:8080/alerts
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: monitoring
+resources:
+  - deployment.yaml
+  - service.yaml
+configMapGenerator:
+  - name: alert-sink-code
+    files:
+      - sink.py
+    options:
+      disableNameSuffixHash: true
