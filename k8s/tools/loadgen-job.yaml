@@ -1,0 +1,47 @@
+# Steady synthetic traffic against orders-api so the SLO panels and alerts have data.
+# kubectl apply -f k8s/tools/loadgen-job.yaml   (delete it to stop)
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: loadgen
+  namespace: orders
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 7200
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: loadgen
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 100
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: loadgen
+          image: curlimages/curl:8.11.1
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "sending ~20 req/s to orders-api"
+              while true; do
+                for i in 1 2 3 4 5 6 7 8 9 10; do
+                  curl -s -o /dev/null http://orders-api.orders.svc/api/orders &
+                done
+                wait
+                sleep 0.5
+              done
+          resources:
+            requests:
+              cpu: 20m
+              memory: 16Mi
+            limits:
+              memory: 32Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
