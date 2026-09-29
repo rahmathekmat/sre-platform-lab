@@ -4,8 +4,9 @@
 1. orders-api answers through its Service
 2. Prometheus discovered and is scraping it (up == 1)
 3. The SLO rule groups are loaded into Prometheus
-4. Game day: inject 50% errors and confirm the fast burn alert goes pending or firing,
-   then roll back and confirm the service recovers
+4. Game day: inject 50% errors and confirm the fast burn alert goes pending or firing
+5. Confirm Alertmanager actually delivered the page to the webhook receiver (alert-sink)
+6. Roll back and confirm the service recovers
 
 Needs kubectl pointed at the cluster. Stdlib only.
 """
@@ -89,6 +90,19 @@ def rule_groups(base: str) -> set[str]:
     return {g["name"] for g in json.loads(body)["data"]["groups"]}
 
 
+def page_delivered(sink: str, alertname: str) -> bool:
+    code, body = http_get(f"{sink}/alerts")
+    if code != 200:
+        return False
+    for entry in json.loads(body):
+        if entry["receiver"] != "page":
+            continue
+        for alert in entry["payload"].get("alerts", []):
+            if alert["labels"].get("alertname") == alertname and alert["status"] == "firing":
+                return True
+    return False
+
+
 def set_error_rate(rate: str) -> None:
     kubectl("-n", NS_APP, "set", "env", "deployment/orders-api", f"FAULT_ERROR_RATE={rate}")
     kubectl("-n", NS_APP, "rollout", "status", "deployment/orders-api", "--timeout=180s")
@@ -122,9 +136,17 @@ def main() -> None:
             interval=10,
         )
 
-        log("game day: rolling back")
-        set_error_rate("0")
-        time.sleep(10)  # let old pods finish draining so port-forward picks a new one
+    with port_forward(NS_MON, "svc/alert-sink", 18081, 8080) as sink:
+        wait_for(
+            lambda: page_delivered(sink, "OrdersApiErrorBudgetBurnFast"),
+            300,
+            "Alertmanager delivered the page to alert-sink",
+            interval=10,
+        )
+
+    log("game day: rolling back")
+    set_error_rate("0")
+    time.sleep(10)  # let old pods finish draining so port-forward picks a new one
 
     with port_forward(NS_APP, "svc/orders-api", 18080, 80) as app:
         codes = [http_get(f"{app}/api/orders")[0] for _ in range(20)]
