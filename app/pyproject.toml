@@ -1,0 +1,17 @@
+[project]
+name = "orders-api"
+version = "0.1.0"
+description = "Small HTTP service instrumented for SLO-based alerting"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "N", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
