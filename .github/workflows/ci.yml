@@ -69,9 +69,25 @@ jobs:
           terraform_wrapper: false
       - run: make tf-check
 
+  security:
+    name: security (trivy image + config)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install trivy
+        run: |
+          mkdir -p "$HOME/bin" && echo "$HOME/bin" >> "$GITHUB_PATH"
+          v=$(make -s print-TRIVY_VERSION)
+          curl -sSfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+            | sh -s -- -b "$HOME/bin" "v${v}"
+      - name: Build image
+        run: docker build -t orders-api:local app
+      - run: make scan-image
+      - run: make scan-config
+
   e2e:
     name: e2e on kind (deploy + game day)
-    needs: [app, rules, manifests]
+    needs: [app, rules, manifests, security]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
