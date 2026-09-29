@@ -36,9 +36,9 @@ scan-image: ## Trivy: fail on fixable CRITICAL/HIGH CVEs in the app image
 	trivy image --ignore-unfixed --severity CRITICAL,HIGH --exit-code 1 --no-progress $(IMAGE)
 
 scan-config: ## Trivy: fail on HIGH/CRITICAL misconfigurations in Kubernetes manifests
-	trivy config --severity CRITICAL,HIGH --exit-code 1 --no-progress k8s
+	trivy config --severity CRITICAL,HIGH --exit-code 1 k8s
 	@echo "--- terraform (advisory) ---"
-	trivy config --severity CRITICAL,HIGH --exit-code 0 --no-progress terraform
+	trivy config --severity CRITICAL,HIGH --exit-code 0 terraform
 
 tf-check: ## terraform fmt + validate every environment
 	terraform fmt -check -recursive terraform
