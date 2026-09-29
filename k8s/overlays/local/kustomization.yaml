@@ -1,0 +1,17 @@
+# Local kind cluster: image is side-loaded with `kind load`, so never pull it.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+images:
+  - name: orders-api
+    newName: orders-api
+    newTag: local
+patches:
+  - target:
+      kind: Deployment
+      name: orders-api
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Never
