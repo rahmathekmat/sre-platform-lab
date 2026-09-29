@@ -27,12 +27,17 @@ def running():
         s.shutdown()
 
 
-def get(url: str) -> tuple[int, bytes]:
+def get(url: str, headers: dict | None = None) -> tuple[int, bytes]:
+    return get_full(url, headers)[:2]
+
+
+def get_full(url: str, headers: dict | None = None) -> tuple[int, bytes, dict]:
+    req = urllib.request.Request(url, headers=headers or {})
     try:
-        with urllib.request.urlopen(url, timeout=5) as r:
-            return r.status, r.read()
+        with urllib.request.urlopen(req, timeout=5) as r:
+            return r.status, r.read(), dict(r.headers)
     except urllib.error.HTTPError as e:
-        return e.code, e.read()
+        return e.code, e.read(), dict(e.headers)
 
 
 def metric_value(metrics: str, name: str, labels: str) -> float:
@@ -129,3 +134,20 @@ def test_config_from_env(monkeypatch):
     monkeypatch.setenv("PORT", "9090")
     cfg = Config.from_env()
     assert (cfg.error_rate, cfg.latency_ms, cfg.port) == (0.05, 200, 9090)
+
+
+def test_request_id_is_minted_and_echoed(running):
+    _, base = running(Config())
+    _, _, headers = get_full(f"{base}/api/orders")
+    minted = headers["X-Request-ID"]
+    assert len(minted) == 16
+    _, _, headers = get_full(f"{base}/api/orders", {"X-Request-ID": "abc-123"})
+    assert headers["X-Request-ID"] == "abc-123"
+
+
+def test_errors_are_logged_with_request_id(running, caplog):
+    _, base = running(Config(error_rate=1.0))
+    with caplog.at_level("WARNING", logger="orders_api"):
+        get(f"{base}/api/orders", {"X-Request-ID": "trace-me"})
+    messages = [r.getMessage() for r in caplog.records]
+    assert any("code=500" in m and "request_id=trace-me" in m for m in messages)
