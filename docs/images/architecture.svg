@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#8b9bb4"/>
+    </marker>
+  </defs>
+  <rect width="1200" height="700" rx="18" fill="#0b1220"/>
+  <text x="24" y="44" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="22" font-weight="700" fill="#e6edf7">Architecture</text>
+  <rect x="200" y="70" width="970" height="600" rx="16" fill="none" stroke="#60a5fa" stroke-opacity="0.45" stroke-dasharray="8 6"/>
+  <text x="222" y="98" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#60a5fa">Kubernetes cluster  ·  kind (local + CI) or EKS (AWS)</text>
+  <rect x="222" y="118" width="440" height="530" rx="12" fill="#0e1628" stroke="#23304a"/>
+  <text x="240" y="142" font-family="SFMono-Regular, Consolas, Menlo, monospace" font-size="13" fill="#8b9bb4">namespace: orders</text>
+  <rect x="690" y="118" width="480" height="530" rx="12" fill="#0e1628" stroke="#23304a"/>
+  <text x="708" y="142" font-family="SFMono-Regular, Consolas, Menlo, monospace" font-size="13" fill="#8b9bb4">namespace: monitoring</text>
+  <g transform="translate(24,150)">
+    <rect width="150" height="70" rx="12" fill="#111a2e" stroke="#a78bfa" stroke-opacity="0.7" stroke-width="1.5"/>
+    <rect width="5" height="70" rx="2.5" fill="#a78bfa"/>
+    <text x="20" y="31" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="17" font-weight="600" fill="#e6edf7">Terraform</text>
+    <text x="20" y="53" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="13" fill="#8b9bb4">provisions it all</text>
+  </g>
+  <g transform="translate(24,470)">
+    <rect width="150" height="70" rx="12" fill="#111a2e" stroke="#8b9bb4" stroke-opacity="0.7" stroke-width="1.5"/>
+    <rect width="5" height="70" rx="2.5" fill="#8b9bb4"/>
+    <text x="20" y="31" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="17" font-weight="600" fill="#e6edf7">GitHub Actions</text>
+    <text x="20" y="53" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="13" fill="#8b9bb4">tests, deploys, breaks</text>
+  </g>
+  <line x1="174" y1="185" x2="218" y2="185" stroke="#a78bfa" stroke-width="1.8" marker-end="url(#arr)"/>
+  <line x1="174" y1="505" x2="218" y2="505" stroke="#8b9bb4" stroke-width="1.8" marker-end="url(#arr)"/>
+  <g transform="translate(244,165)">
+    <rect width="190" height="64" rx="12" fill="#111a2e" stroke="#8b9bb4" stroke-opacity="0.7" stroke-width="1.5"/>
+    <rect width="5" height="64" rx="2.5" fill="#8b9bb4"/>
+    <text x="20" y="28" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="17" font-weight="600" fill="#e6edf7">loadgen Job</text>
+    <text x="20" y="50" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="13" fill="#8b9bb4">~20 req/s</text>
+  </g>
+  <g transform="translate(244,275)">
+    <rect width="190" height="64" rx="12" fill="#111a2e" stroke="#60a5fa" stroke-opacity="0.7" stroke-width="1.5"/>
+    <rect width="5" height="64" rx="2.5" fill="#60a5fa"/>
+    <text x="20" y="28" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="17" font-weight="600" fill="#e6edf7">Service</text>
+    <text x="20" y="50" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="13" fill="#8b9bb4">orders-api:80</text>
+  </g>
+  <rect x="244" y="390" width="190" height="72" rx="12" fill="#111a2e" stroke="#2dd4bf" stroke-opacity="0.5" stroke-width="1.5"/>
+  <rect x="252" y="398" width="190" height="72" rx="12" fill="#111a2e" stroke="#2dd4bf" stroke-opacity="0.75" stroke-width="1.5"/>
+  <rect x="260" y="406" width="190" height="72" rx="12" fill="#111a2e" stroke="#2dd4bf" stroke-opacity="1.0" stroke-width="1.5"/>
+  <rect x="260" y="406" width="5" height="72" rx="2.5" fill="#2dd4bf"/>
+  <text x="280" y="436" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="17" font-weight="600" fill="#e6edf7">orders-api × 3</text>
+  <text x="280" y="458" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="13" fill="#8b9bb4">/api/orders  /metrics</text>
+  <line x1="339" y1="229" x2="339" y2="271" stroke="#8b9bb4" stroke-width="1.8" marker-end="url(#arr)"/>
+  <line x1="339" y1="339" x2="339" y2="386" stroke="#60a5fa" stroke-width="1.8" marker-end="url(#arr)"/>
+  <rect x="460" y="165" width="182" height="200" rx="12" fill="#111a2e" stroke="#23304a"/>
+  <text x="476" y="192" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#e6edf7">Guardrails</text>
+  <circle cx="482" cy="220" r="4" fill="#2dd4bf"/><text x="494" y="225" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="13" fill="#8b9bb4">PDB: min 2 available</text>
+  <circle cx="482" cy="250" r="4" fill="#2dd4bf"/><text x="494" y="255" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="13" fill="#8b9bb4">HPA: 3 to 10 pods</text>
+  <circle cx="482" cy="280" r="4" fill="#2dd4bf"/><text x="494" y="285" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="13" fill="#8b9bb4">NetworkPolicy: deny all</text>
+  <circle cx="482" cy="310" r="4" fill="#2dd4bf"/><text x="494" y="315" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="13" fill="#8b9bb4">Pod Security: restricted</text>
+  <circle cx="482" cy="340" r="4" fill="#2dd4bf"/><text x="494" y="345" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="13" fill="#8b9bb4">Drain on SIGTERM</text>
+  <g transform="translate(460,520)">
+    <rect width="182" height="64" rx="12" fill="#111a2e" stroke="#fbbf24" stroke-opacity="0.7" stroke-width="1.5"/>
+    <rect width="5" height="64" rx="2.5" fill="#fbbf24"/>
+    <text x="20" y="28" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="17" font-weight="600" fill="#e6edf7">PrometheusRule</text>
+    <text x="20" y="50" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="13" fill="#8b9bb4">SLOs + burn alerts</text>
+  </g>
+  <g transform="translate(244,520)">
+    <rect width="190" height="64" rx="12" fill="#111a2e" stroke="#fbbf24" stroke-opacity="0.7" stroke-width="1.5"/>
+    <rect width="5" height="64" rx="2.5" fill="#fbbf24"/>
+    <text x="20" y="28" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="17" font-weight="600" fill="#e6edf7">ServiceMonitor</text>
+    <text x="20" y="50" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="13" fill="#8b9bb4">scrape every 15s</text>
+  </g>
+  <g transform="translate(712,165)">
+    <rect width="210" height="72" rx="12" fill="#111a2e" stroke="#fbbf24" stroke-opacity="0.7" stroke-width="1.5"/>
+    <rect width="5" height="72" rx="2.5" fill="#fbbf24"/>
+    <text x="20" y="32" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="17" font-weight="600" fill="#e6edf7">Prometheus</text>
+    <text x="20" y="54" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="13" fill="#8b9bb4">recording rules · alerts</text>
+  </g>
+  <g transform="translate(958,165)">
+    <rect width="190" height="72" rx="12" fill="#111a2e" stroke="#fbbf24" stroke-opacity="0.7" stroke-width="1.5"/>
+    <rect width="5" height="72" rx="2.5" fill="#fbbf24"/>
+    <text x="20" y="32" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="17" font-weight="600" fill="#e6edf7">Grafana</text>
+    <text x="20" y="54" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="13" fill="#8b9bb4">SLO dashboard</text>
+  </g>
+  <g transform="translate(712,330)">
+    <rect width="210" height="72" rx="12" fill="#111a2e" stroke="#f87171" stroke-opacity="0.7" stroke-width="1.5"/>
+    <rect width="5" height="72" rx="2.5" fill="#f87171"/>
+    <text x="20" y="32" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="17" font-weight="600" fill="#e6edf7">Alertmanager</text>
+    <text x="20" y="54" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="13" fill="#8b9bb4">routes by severity</text>
+  </g>
+  <g transform="translate(958,300)">
+    <rect width="190" height="56" rx="12" fill="#111a2e" stroke="#f87171" stroke-opacity="0.7" stroke-width="1.5"/>
+    <rect width="5" height="56" rx="2.5" fill="#f87171"/>
+    <text x="20" y="24" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="17" font-weight="600" fill="#e6edf7">page</text>
+    <text x="20" y="46" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="13" fill="#8b9bb4">fast burn: 14.4x / 6x</text>
+  </g>
+  <g transform="translate(958,376)">
+    <rect width="190" height="56" rx="12" fill="#111a2e" stroke="#fbbf24" stroke-opacity="0.7" stroke-width="1.5"/>
+    <rect width="5" height="56" rx="2.5" fill="#fbbf24"/>
+    <text x="20" y="24" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="17" font-weight="600" fill="#e6edf7">ticket</text>
+    <text x="20" y="46" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="13" fill="#8b9bb4">slow burn: 3x / 1x</text>
+  </g>
+  <g transform="translate(712,470)">
+    <rect width="436" height="72" rx="12" fill="#111a2e" stroke="#2dd4bf" stroke-opacity="0.7" stroke-width="1.5"/>
+    <rect width="5" height="72" rx="2.5" fill="#2dd4bf"/>
+    <text x="20" y="32" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="17" font-weight="600" fill="#e6edf7">Runbooks</text>
+    <text x="20" y="54" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="13" fill="#8b9bb4">every alert links to docs/runbooks/&lt;alert&gt;.md</text>
+  </g>
+  <path d="M452 440 H 668 V 215 Q 668 205 678 205 H 706" fill="none" stroke="#fbbf24" stroke-width="1.8" marker-end="url(#arr)"/>
+  <text x="470" y="430" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="12.5" fill="#fbbf24">Prometheus scrapes /metrics</text>
+  <path d="M642 552 H 680 V 228 H 706" fill="none" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="6 5" marker-end="url(#arr)"/>
+  <text x="460" y="608" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="12.5" fill="#8b9bb4">rules loaded by the operator</text>
+  <line x1="922" y1="201" x2="954" y2="201" stroke="#fbbf24" stroke-width="1.8" marker-end="url(#arr)"/>
+  <line x1="817" y1="237" x2="817" y2="326" stroke="#f87171" stroke-width="1.8" marker-end="url(#arr)"/><text x="846" y="288" text-anchor="middle" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="12.5" fill="#8b9bb4">fires</text>
+  <line x1="922" y1="360" x2="954" y2="330" stroke="#f87171" stroke-width="1.8" marker-end="url(#arr)"/>
+  <line x1="922" y1="376" x2="954" y2="400" stroke="#fbbf24" stroke-width="1.8" marker-end="url(#arr)"/>
+  <line x1="817" y1="402" x2="817" y2="466" stroke="#2dd4bf" stroke-width="1.8" marker-end="url(#arr)" stroke-dasharray="6 5"/>
+</svg>
